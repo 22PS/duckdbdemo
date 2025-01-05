@@ -11,16 +11,19 @@ const QueryInput = ({ schema }) => {
     if (!query) return alert('Please enter a query');
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/generate-sql',
+        `${process.env.REACT_APP_BACKEND_URL}/api/generate-sql`,
         {
           query,
           schema,
         }
       );
       const sql = response.data.sql;
-      const res = await axios.post('http://localhost:5000/api/execute-query', {
-        sql,
-      });
+      const res = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/execute-query`,
+        {
+          sql,
+        }
+      );
       setResult({ rows: res.data.result });
       resultRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
