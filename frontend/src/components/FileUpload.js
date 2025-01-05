@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const FileUpload = ({ setSchema, setData }) => {
   const [file, setFile] = useState(null);
+
   const handleFileChange = (e) => setFile(e.target.files[0]);
 
   const handleUpload = async () => {
@@ -15,15 +16,13 @@ const FileUpload = ({ setSchema, setData }) => {
 
     try {
       const res = await axios.post(
-        `${process.env.REACT_APP_BACKEND_URL}/api/upload`,
+        'http://localhost:5000/api/upload',
         formData
       );
       setSchema(res.data.schema);
       alert(res.data.message);
 
-      const response = await axios.post(
-        `${process.env.REACT_APP_BACKEND_URL}/api/get-data`
-      );
+      const response = await axios.post('http://localhost:5000/api/get-data');
       setData({ rows: response.data.result });
     } catch (err) {
       alert('File upload failed!');
