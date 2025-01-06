@@ -23,6 +23,7 @@ const FileUpload = ({ setSchema, setData }) => {
       alert(res.data.message);
 
       const response = await axios.post('https://duckdbdemo-backend.vercel.app/api/get-data');
+      alert(res.data.message);
       setData({ rows: response.data.result });
     } catch (err) {
       alert('File upload failed!');
