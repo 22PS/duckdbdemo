@@ -1,5 +1,7 @@
 const duckdb = require('duckdb');
 const path = require('path');
+const axios = require('axios');
+const fs = require('fs');
 const { OpenAI } = require('openai');
 const cloudinary = require('cloudinary').v2;
 require('dotenv').config();
@@ -23,45 +25,43 @@ const uploadFile = async (req, res) => {
   try {
     const file = req.files.file;
     const fileName = `${path.basename(file.name, path.extname(file.name))}.csv`;
-    cloudinary.uploader
-      .upload_stream(
+
+    const cloudinaryResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
         { resource_type: 'raw', public_id: fileName, format: 'csv' },
         (error, result) => {
-          if (error) {
-            console.error('Error uploading file to Cloudinary:', error);
-            return res
-              .status(500)
-              .json({ error: 'Error uploading file to Cloudinary' });
-          }
-
-          const cloudinaryUrl = result.secure_url;
-          console.log(cloudinaryUrl);
-
-          tableName = path.basename(file.name, path.extname(file.name));
-          const query = `CREATE TABLE ${tableName} AS SELECT * FROM read_csv_auto('${cloudinaryUrl}');`;
-          db.run(query, (err) => {
-            if (err) {
-              console.error('Error loading CSV from Cloudinary:', err);
-            } else {
-              console.log('CSV loaded successfully.');
-            }
-          });
-
-          const schemaQuery = `DESCRIBE ${tableName};`;
-          db.all(schemaQuery, (err, rows) => {
-            if (err) {
-              return res
-                .status(500)
-                .json({ error: `Failed to describe table schema ${cloudinaryUrl}` });
-            }
-            res.status(200).json({
-              message: 'CSV uploaded and table created successfully!',
-              schema: rows,
-            });
-          });
+          if (error) return reject(error);
+          resolve(result);
         }
-      )
-      .end(file.data);
+      );
+      uploadStream.end(file.data);
+    });
+
+    const cloudinaryUrl = cloudinaryResult.secure_url;
+    const tmpFilePath = `/tmp/${path.basename(cloudinaryUrl)}`;
+
+    axios
+      .get(cloudinaryUrl, { responseType: 'arraybuffer' })
+      .then((response) => {
+        fs.writeFileSync(tmpFilePath, response.data);
+
+        const query = `CREATE TABLE test AS SELECT * FROM read_csv_auto('${tmpFilePath}');`;
+        db.run(query, (err) => {
+          if (err) {
+            console.error('Error loading CSV from local file:', err.message);
+            res.status(500).json({ error: `DuckDB Error: ${err.message}` });
+          } else {
+            console.log('CSV loaded successfully from local file.');
+            res.status(200).json({ message: 'Table created successfully.' });
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('Error downloading CSV:', error.message);
+        res
+          .status(500)
+          .json({ error: 'Failed to download CSV for local processing.' });
+      });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to upload CSV and create table' });
