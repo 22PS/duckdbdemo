@@ -11,14 +11,14 @@ const QueryInput = ({ schema }) => {
     if (!query) return alert('Please enter a query');
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/generate-sql',
+        'https://duckdbdemo-backend.vercel.app/api/generate-sql',
         {
           query,
           schema,
         }
       );
       const sql = response.data.sql;
-      const res = await axios.post('http://localhost:5000/api/execute-query', {
+      const res = await axios.post('https://duckdbdemo-backend.vercel.app/api/execute-query', {
         sql,
       });
       setResult({ rows: res.data.result });
