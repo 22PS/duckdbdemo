@@ -38,22 +38,40 @@ const uploadFile = async (req, res) => {
     });
 
     const cloudinaryUrl = cloudinaryResult.secure_url;
-    const tmpFilePath = `/tmp/${path.basename(cloudinaryUrl)}`;
+    const tempFilePath = `/tmp/${fileName}`;
 
     axios
       .get(cloudinaryUrl, { responseType: 'arraybuffer' })
       .then((response) => {
-        fs.writeFileSync(tmpFilePath, response.data);
+        fs.writeFileSync(tempFilePath, response.data);
 
-        const query = `CREATE TABLE test AS SELECT * FROM read_csv_auto('${tmpFilePath}');`;
+        tableName = path.basename(file.name, path.extname(file.name));
+        const query = `CREATE TABLE ${tableName} AS SELECT * FROM read_csv_auto('${tempFilePath}');`;
+
         db.run(query, (err) => {
           if (err) {
-            console.error('Error loading CSV from local file:', err.message);
-            res.status(500).json({ error: `DuckDB Error: ${err.message}` });
+            console.error('Error loading CSV into DuckDB:', err);
+            return res
+              .status(500)
+              .json({ error: `DuckDB Error: ${err.message}` });
           } else {
             console.log('CSV loaded successfully from local file.');
             res.status(200).json({ message: 'Table created successfully.' });
           }
+        });
+
+        const schemaQuery = `DESCRIBE ${tableName};`;
+        db.all(schemaQuery, (err, rows) => {
+          if (err) {
+            console.error('Error describing table schema:', err);
+            return res
+              .status(500)
+              .json({ error: 'Failed to describe table schema' });
+          }
+          res.status(200).json({
+            message: 'CSV uploaded and table created successfully!',
+            schema: rows,
+          });
         });
       })
       .catch((error) => {
@@ -67,8 +85,8 @@ const uploadFile = async (req, res) => {
     res.status(500).json({ error: 'Failed to upload CSV and create table' });
   }
 };
+
 const getData = async (req, res) => {
-  const { sql } = req.body;
   if (!tableName) {
     return res.status(400).json({ error: 'No CSV file uploaded.' });
   }
