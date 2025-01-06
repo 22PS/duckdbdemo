@@ -52,7 +52,7 @@ const uploadFile = async (req, res) => {
             if (err) {
               return res
                 .status(500)
-                .json({ error: `Failed to describe table schema ${tableName}` });
+                .json({ error: `Failed to describe table schema ${cloudinaryUrl}` });
             }
             res.status(200).json({
               message: 'CSV uploaded and table created successfully!',
