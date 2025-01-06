@@ -26,6 +26,7 @@ const FileUpload = ({ setSchema, setData }) => {
       alert(res.data.message);
       setData({ rows: response.data.result });
     } catch (err) {
+      console.log(err);
       alert('File upload failed!');
     }
   };
